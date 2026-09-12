@@ -1,8 +1,8 @@
 import streamlit as st
 
-# ==============================
+# ==========================================
 # 기본 설정
-# ==============================
+# ==========================================
 
 st.set_page_config(
     page_title="전기요금 지킴이",
@@ -12,7 +12,12 @@ st.set_page_config(
 # 전기요금 단가
 ELECTRICITY_RATE = 150  # 원/kWh
 
-# 전자제품별 기본 소비전력(W)
+
+# ==========================================
+# 전자제품별 기본 소비전력
+# 단위: W
+# ==========================================
+
 POWER_DATA = {
     "공기청정기": 50,
     "노트북": 60,
@@ -38,13 +43,17 @@ POWER_DATA = {
     "전기히터": 1500
 }
 
-# 가나다순
+
+# ==========================================
+# 전자제품 가나다순 정렬
+# ==========================================
+
 PRODUCTS = sorted(POWER_DATA.keys())
 
 
-# ==============================
+# ==========================================
 # 세션 상태
-# ==============================
+# ==========================================
 
 if "page" not in st.session_state:
     st.session_state.page = 1
@@ -59,20 +68,20 @@ if "estimated_cost" not in st.session_state:
     st.session_state.estimated_cost = None
 
 
-# ==============================
+# ==========================================
 # CSS
-# ==============================
+# ==========================================
 
 st.markdown(
     """
     <style>
 
-    /* 전체 기본 스타일 */
+    /* 전체 앱 */
     .stApp {
         font-family: Arial, sans-serif;
     }
 
-    /* 기본 초록색 버튼 */
+    /* 모든 일반 버튼 - 초록색 */
     div.stButton > button {
         background-color: #28A745;
         color: white;
@@ -86,18 +95,19 @@ st.markdown(
         color: white;
     }
 
-    /* 입력 칸 파란색 */
+    /* 숫자 입력 칸 - 파란색 */
     div[data-testid="stNumberInput"] input {
         background-color: #D9ECFF;
         border: 2px solid #4DA3FF;
+        color: black;
     }
 
-    /* 선택 메뉴 파란색 */
+    /* 제품 선택 칸 - 파란색 */
     div[data-baseweb="select"] {
         background-color: #D9ECFF;
     }
 
-    /* 페이지 1 제목 */
+    /* 1번 페이지 제목 */
     .page1-title {
         text-align: center;
         color: black;
@@ -107,22 +117,13 @@ st.markdown(
         margin-bottom: 80px;
     }
 
-    /* 선택한 제품 */
-    .product-name {
+    /* 3번 페이지 결과 */
+    .result-cost {
         text-align: center;
         color: black;
-        font-size: 32px;
+        font-size: 60px;
         font-weight: bold;
-        margin-top: 30px;
-    }
-
-    /* 페이지 3 */
-    .result {
-        text-align: center;
-        color: black;
-        font-size: 55px;
-        font-weight: bold;
-        margin-top: 150px;
+        margin-top: 180px;
     }
 
     </style>
@@ -131,9 +132,9 @@ st.markdown(
 )
 
 
-# ==============================
+# ==========================================
 # 1번 페이지
-# ==============================
+# ==========================================
 
 def page_one():
 
@@ -142,6 +143,7 @@ def page_one():
         unsafe_allow_html=True
     )
 
+    # 화면 가운데 배치
     left, center, right = st.columns([1, 2, 1])
 
     with center:
@@ -152,36 +154,23 @@ def page_one():
             index=0
         )
 
+        # 제품을 선택하면 바로 2번 페이지로 이동
         if selected != "당신이 사용할 전자제품은?":
 
             st.session_state.selected_product = selected
 
-            st.markdown(
-                f'<div class="product-name">{selected}</div>',
-                unsafe_allow_html=True
-            )
+            # 이전에 입력했던 소비전력 초기화
+            st.session_state.selected_power = None
 
-            # 제품 선택 후 3초 대기
-            st.info("선택되었습니다. 3초 후 다음 페이지로 이동합니다.")
-
-            st.markdown(
-                """
-                <script>
-                    setTimeout(function() {
-                        window.parent.location.reload();
-                    }, 3000);
-                </script>
-                """,
-                unsafe_allow_html=True
-            )
-
+            # 2번 페이지로 이동
             st.session_state.page = 2
+
             st.rerun()
 
 
-# ==============================
+# ==========================================
 # 2번 페이지
-# ==============================
+# ==========================================
 
 def page_two():
 
@@ -198,14 +187,15 @@ def page_two():
         unsafe_allow_html=True
     )
 
+    # 선택한 제품 이름
     st.markdown(
         f"""
         <div style="
-            text-align:center;
-            color:black;
-            font-size:32px;
-            font-weight:bold;
-            margin-bottom:50px;
+            text-align: center;
+            color: black;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 50px;
         ">
             {st.session_state.selected_product}
         </div>
@@ -213,12 +203,13 @@ def page_two():
         unsafe_allow_html=True
     )
 
-    # 3개의 영역
+    # 화면을 왼쪽 / 가운데 / 오른쪽으로 나눔
     left, center, right = st.columns([1, 1, 1])
 
-    # --------------------------------
-    # 왼쪽: 소비전력
-    # --------------------------------
+
+    # ======================================
+    # 왼쪽 - 소비전력
+    # ======================================
 
     with left:
 
@@ -233,18 +224,20 @@ def page_two():
             label_visibility="collapsed"
         )
 
+        # 몰라요 버튼
         if st.button("몰라요"):
 
-            # 기본값 W → kW 변환
-            default_power = (
+            # 기본 소비전력(W)을 kW로 변환
+            default_power_kw = (
                 POWER_DATA[st.session_state.selected_product] / 1000
             )
 
-            st.session_state.selected_power = default_power
+            st.session_state.selected_power = default_power_kw
 
-    # --------------------------------
-    # 가운데: 사용시간
-    # --------------------------------
+
+    # ======================================
+    # 가운데 - 예상 사용시간
+    # ======================================
 
     with center:
 
@@ -260,9 +253,10 @@ def page_two():
             label_visibility="collapsed"
         )
 
-    # --------------------------------
-    # 오른쪽: 완료
-    # --------------------------------
+
+    # ======================================
+    # 오른쪽 - 완료
+    # ======================================
 
     with right:
 
@@ -272,57 +266,87 @@ def page_two():
 
         if st.button("완료"):
 
-            # 소비전력 입력 확인
+            # --------------------------------
+            # 소비전력을 입력하지 않은 경우
+            # --------------------------------
+
             if power <= 0 and st.session_state.selected_power is None:
+
+                # 아무것도 하지 않음
                 pass
 
-            # 사용시간 입력 확인
+            # --------------------------------
+            # 사용시간이 범위를 벗어난 경우
+            # --------------------------------
+
             elif usage_time < 0.01 or usage_time > 24.00:
+
+                # 아무것도 하지 않음
                 pass
+
+            # --------------------------------
+            # 정상적으로 입력한 경우
+            # --------------------------------
 
             else:
 
                 # 소비전력 결정
                 if st.session_state.selected_power is not None:
-                    final_power = st.session_state.selected_power
+                    final_power_kw = st.session_state.selected_power
                 else:
-                    final_power = power
+                    final_power_kw = power
 
-                # ------------------------------
+                # ==================================
                 # 전력 사용량 계산
-                # ------------------------------
+                # ==================================
+                #
+                # 전력 사용량(kWh)
+                # = 소비전력(kW) × 사용시간(h)
+                #
 
-                electricity_usage = final_power * usage_time
+                electricity_usage = (
+                    final_power_kw * usage_time
+                )
 
-                # ------------------------------
+                # ==================================
                 # 예상 전기요금 계산
-                # ------------------------------
+                # ==================================
+                #
+                # 예상 전기요금(원)
+                # = 전력 사용량(kWh) × 150원
+                #
 
                 estimated_cost = (
                     electricity_usage * ELECTRICITY_RATE
                 )
 
+                # 계산 결과 저장
                 st.session_state.estimated_cost = estimated_cost
 
                 # 3번 페이지로 이동
                 st.session_state.page = 3
+
                 st.rerun()
 
-    # --------------------------------
-    # 우측 하단: 잘못 선택했나요?
-    # --------------------------------
+
+    # ======================================
+    # 우측 하단 - 잘못 선택했나요?
+    # ======================================
 
     st.write("")
     st.write("")
     st.write("")
 
-    left_space, bottom_right = st.columns([5, 1])
+    empty_space, bottom_right = st.columns([5, 1])
 
     with bottom_right:
 
         if st.button("잘못 선택했나요?"):
 
+            # 1번 페이지로 이동
             st.session_state.page = 1
+
+            # 선택 정보 초기화
             st.session_state.selected_product = None
             st.session_state.selected_power = None
             st.session_state.estimated_cost = None
@@ -332,26 +356,26 @@ def page_two():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ==============================
+# ==========================================
 # 3번 페이지
-# ==============================
+# ==========================================
 
 def page_three():
 
     st.markdown(
         f"""
         <div style="
-            background-color:white;
-            min-height:85vh;
-            display:flex;
-            justify-content:center;
-            align-items:center;
+            background-color: white;
+            min-height: 85vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         ">
             <div style="
-                color:black;
-                font-size:55px;
-                font-weight:bold;
-                text-align:center;
+                color: black;
+                font-size: 60px;
+                font-weight: bold;
+                text-align: center;
             ">
                 {st.session_state.estimated_cost:,.0f}원
             </div>
@@ -361,16 +385,19 @@ def page_three():
     )
 
 
-# ==============================
-# 페이지 실행
-# ==============================
+# ==========================================
+# 현재 페이지 실행
+# ==========================================
 
 if st.session_state.page == 1:
+
     page_one()
 
 elif st.session_state.page == 2:
+
     page_two()
 
 elif st.session_state.page == 3:
+
     page_three()
 
