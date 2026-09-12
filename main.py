@@ -1,23 +1,14 @@
 import streamlit as st
 
-# ==========================================
-# 기본 설정
-# ==========================================
-
 st.set_page_config(
     page_title="전기요금 지킴이",
     layout="wide"
 )
 
 # 전기요금 단가
-ELECTRICITY_RATE = 150  # 원/kWh
+ELECTRICITY_RATE = 150
 
-
-# ==========================================
-# 전자제품별 기본 소비전력
-# 단위: W
-# ==========================================
-
+# 전자제품별 기본 소비전력(W)
 POWER_DATA = {
     "공기청정기": 50,
     "노트북": 60,
@@ -43,14 +34,9 @@ POWER_DATA = {
     "전기히터": 1500
 }
 
-# 가나다순
 PRODUCTS = sorted(POWER_DATA.keys())
 
-
-# ==========================================
 # 세션 상태
-# ==========================================
-
 if "page" not in st.session_state:
     st.session_state.page = 1
 
@@ -64,20 +50,14 @@ if "estimated_cost" not in st.session_state:
     st.session_state.estimated_cost = None
 
 
-# ==========================================
 # CSS
-# ==========================================
-
 st.markdown(
     """
     <style>
-
-    /* 전체 앱 */
     .stApp {
         font-family: Arial, sans-serif;
     }
 
-    /* 모든 일반 버튼 */
     div.stButton > button {
         background-color: #28A745;
         color: white;
@@ -92,19 +72,16 @@ st.markdown(
         color: white;
     }
 
-    /* 숫자 입력 칸 */
     div[data-testid="stNumberInput"] input {
         background-color: #D9ECFF;
         border: 2px solid #4DA3FF;
         color: black;
     }
 
-    /* 선택 메뉴 */
     div[data-baseweb="select"] {
         background-color: #D9ECFF;
     }
 
-    /* 페이지 1 제목 */
     .page1-title {
         text-align: center;
         color: black;
@@ -114,7 +91,6 @@ st.markdown(
         margin-bottom: 70px;
     }
 
-    /* 선택한 제품 */
     .selected-product {
         text-align: center;
         color: black;
@@ -123,7 +99,6 @@ st.markdown(
         margin-bottom: 40px;
     }
 
-    /* 결과 */
     .result-title {
         text-align: center;
         color: black;
@@ -139,17 +114,13 @@ st.markdown(
         font-weight: bold;
         margin-top: 40px;
     }
-
     </style>
     """,
     unsafe_allow_html=True
 )
 
 
-# ==========================================
 # 1번 페이지
-# ==========================================
-
 def page_one():
 
     st.markdown(
@@ -168,24 +139,19 @@ def page_one():
             key="product_select"
         )
 
-        # 제품을 선택하면 즉시 2번 페이지로 이동
         if selected != "당신이 사용할 전자제품은?":
 
             st.session_state.selected_product = selected
             st.session_state.default_power_kw = None
+            st.session_state.estimated_cost = None
             st.session_state.page = 2
 
             st.rerun()
 
 
-# ==========================================
 # 2번 페이지
-# ==========================================
-
 def page_two():
 
-    # Streamlit 위젯을 HTML div 안에 넣지 않고
-    # 페이지 전체 배경에 CSS를 적용
     st.markdown(
         """
         <style>
@@ -201,7 +167,6 @@ def page_two():
         unsafe_allow_html=True
     )
 
-    # 선택한 제품
     st.markdown(
         f'<div class="selected-product">'
         f'{st.session_state.selected_product}'
@@ -209,15 +174,7 @@ def page_two():
         unsafe_allow_html=True
     )
 
-    # ======================================
-    # 입력 영역
-    # ======================================
-
     left, center, right = st.columns([1, 1, 1])
-
-    # --------------------------------------
-    # 왼쪽: 소비전력
-    # --------------------------------------
 
     with left:
 
@@ -233,22 +190,15 @@ def page_two():
             key="power_input"
         )
 
-        # 몰라요
         if st.button("몰라요", key="unknown_power"):
 
             default_power_w = POWER_DATA[
                 st.session_state.selected_product
             ]
 
-            # W → kW
             st.session_state.default_power_kw = (
                 default_power_w / 1000
             )
-
-
-    # --------------------------------------
-    # 가운데: 예상 사용시간
-    # --------------------------------------
 
     with center:
 
@@ -265,40 +215,25 @@ def page_two():
             key="usage_time_input"
         )
 
-
-    # --------------------------------------
-    # 오른쪽: 완료
-    # --------------------------------------
-
     with right:
 
-        st.subheader("")
+        st.write("")
+        st.write("")
+        st.write("")
 
         if st.button("완료", key="complete_button"):
 
-            # 소비전력 입력 여부
             has_power = (
                 power > 0
                 or st.session_state.default_power_kw is not None
             )
 
-            # 사용시간 입력 여부
             has_valid_time = (
                 usage_time >= 0.01
                 and usage_time <= 24.00
             )
 
-            # 소비전력 또는 사용시간이 잘못된 경우
-            if not has_power or not has_valid_time:
-
-                # 아무것도 하지 않음
-                pass
-
-            else:
-
-                # ----------------------------------
-                # 최종 소비전력
-                # ----------------------------------
+            if has_power and has_valid_time:
 
                 if st.session_state.default_power_kw is not None:
                     final_power_kw = (
@@ -307,35 +242,18 @@ def page_two():
                 else:
                     final_power_kw = power
 
-                # ----------------------------------
-                # 전력 사용량
-                # ----------------------------------
-
                 electricity_usage = (
                     final_power_kw * usage_time
                 )
-
-                # ----------------------------------
-                # 예상 전기요금
-                # ----------------------------------
 
                 estimated_cost = (
                     electricity_usage * ELECTRICITY_RATE
                 )
 
-                st.session_state.estimated_cost = (
-                    estimated_cost
-                )
-
-                # 3번 페이지
+                st.session_state.estimated_cost = estimated_cost
                 st.session_state.page = 3
 
                 st.rerun()
-
-
-    # ======================================
-    # 우측 하단: 잘못 선택했나요?
-    # ======================================
 
     st.write("")
     st.write("")
@@ -361,13 +279,9 @@ def page_two():
             st.rerun()
 
 
-# ==========================================
 # 3번 페이지
-# ==========================================
-
 def page_three():
 
-    # 흰색 배경
     st.markdown(
         """
         <style>
@@ -396,29 +310,12 @@ def page_three():
     )
 
 
-# ==========================================
 # 페이지 실행
-# ==========================================
-
 if st.session_state.page == 1:
-
     page_one()
 
 elif st.session_state.page == 2:
-
     page_two()
 
 elif st.session_state.page == 3:
-
     page_three()
-
-
-이 버전에서는 노란색 <div> 안에 Streamlit 위젯을 넣지 않았기 때문에, 2번 페이지에서 입력창과 버튼이 사라지는 문제가 없어.
-
-그리고 중요한 점 하나: app.py 전체를 위 코드로 교체한 뒤 저장하고 Streamlit을 다시 실행해줘. 이전 코드가 남아 있으면 같은 문제가 계속 나타날 수 있어.
-
-실행하면:
-
-제품 선택 → 즉시 노란색 화면 → 소비전력 / 몰라요 / 예상 사용시간 / 완료 → 전기요금 결과
-
-순서로 작동해야 해.
