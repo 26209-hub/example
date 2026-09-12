@@ -11,32 +11,33 @@ st.set_page_config(
 )
 
 # =========================================================
-# 전자제품 평균 소비전력
+# 전자제품별 평균 소비전력
+# 사용자가 제공한 값
 # 단위: kW
 # =========================================================
 
 PRODUCT_POWER = {
-    "공기청정기": 0.040,
     "노트북": 0.065,
     "데스크톱 컴퓨터": 0.200,
+    "TV": 0.100,
+    "선풍기": 0.045,
+    "공기청정기": 0.040,
+    "제습기": 0.350,
+    "에어컨": 1.000,
     "냉장고": 0.100,
     "김치냉장고": 0.100,
-    "선풍기": 0.045,
     "세탁기": 0.500,
-    "식기세척기": 1.500,
-    "에어컨": 1.000,
-    "에어프라이어": 1.500,
     "의류건조기": 2.000,
-    "인덕션": 2.000,
-    "전기다리미": 1.500,
-    "전기밥솥": 0.800,
-    "전기장판": 0.100,
-    "전기포트": 1.500,
-    "전자레인지": 1.200,
-    "제습기": 0.350,
     "청소기": 1.000,
+    "전기밥솥": 0.800,
+    "전자레인지": 1.200,
+    "전기포트": 1.500,
+    "에어프라이어": 1.500,
+    "인덕션": 2.000,
+    "식기세척기": 1.500,
     "헤어드라이어": 1.500,
-    "TV": 0.100
+    "전기다리미": 1.500,
+    "전기장판": 0.100
 }
 
 # 가나다순
@@ -56,7 +57,6 @@ if "page" not in st.session_state:
 if "selected_product" not in st.session_state:
     st.session_state.selected_product = None
 
-# 소비전력 기본값은 0
 if "power_value" not in st.session_state:
     st.session_state.power_value = 0.0
 
@@ -83,7 +83,7 @@ st.markdown(
         color: black;
     }
 
-    /* 제목 */
+    /* 1페이지 제목 */
     .main-title {
         text-align: center;
         font-size: 42px;
@@ -222,7 +222,7 @@ def show_page_one():
         unsafe_allow_html=True
     )
 
-    # 전자제품 선택
+    # 제품 선택
     selected = st.selectbox(
         "전자제품",
         PRODUCTS,
@@ -231,38 +231,39 @@ def show_page_one():
         label_visibility="collapsed"
     )
 
-    # 제품 선택
+    # 제품을 선택하면 2페이지로 이동
     if selected is not None:
 
-        # 선택한 제품 저장
         st.session_state.selected_product = selected
 
         # 중요:
-        # 제품을 선택해도 소비전력은 0으로 시작
-        # 평균값은 '몰라요'를 눌렀을 때만 사용
+        # 제품을 선택했을 때는 소비전력을 0으로 시작
+        # 평균값은 "평균값으로 하기" 버튼을 눌렀을 때만 입력
         st.session_state.power_value = 0.0
 
         # 사용시간 초기값
         st.session_state.usage_time = 0.01
 
-        # 2페이지 이동
         st.session_state.page = 2
 
         st.rerun()
 
 
 # =========================================================
-# 몰라요 버튼
+# "평균값으로 하기" 버튼 함수
 # =========================================================
 
-def use_average_power():
+def set_average_power():
 
     product = st.session_state.selected_product
 
     if product is not None:
 
-        # 선택한 제품의 평균 소비전력으로 변경
-        st.session_state.power_value = PRODUCT_POWER[product]
+        # 선택한 제품의 정확한 평균 소비전력
+        average_power = PRODUCT_POWER[product]
+
+        # 입력값을 평균값으로 변경
+        st.session_state.power_value = average_power
 
 
 # =========================================================
@@ -285,24 +286,24 @@ def show_page_two():
 
     product = st.session_state.selected_product
 
-    # 제품이 없으면 1페이지
+    # 제품 정보가 없으면 1페이지로 이동
     if product is None:
 
         st.session_state.page = 1
         st.rerun()
 
-    # 제품 이름
+    # 선택한 제품 표시
     st.markdown(
         f'<div class="product-name">{product}</div>',
         unsafe_allow_html=True
     )
 
-    # 화면을 3개 영역으로 나눔
+    # 화면 3분할
     col1, col2, col3 = st.columns([1.4, 1.4, 1])
 
 
     # =====================================================
-    # 소비전력 입력
+    # 소비전력
     # =====================================================
 
     with col1:
@@ -312,37 +313,39 @@ def show_page_two():
             unsafe_allow_html=True
         )
 
+        # 소비전력 입력
         power = st.number_input(
             "소비전력",
             min_value=0.0,
             max_value=100.0,
 
-            # 기본값 0
+            # 기본값은 0
             value=float(st.session_state.power_value),
 
             # 0.001 kW 단위
             step=0.001,
 
+            # 소수점 3자리 표시
             format="%.3f",
 
-            key="power_input_box",
+            key="power_input",
 
             label_visibility="collapsed"
         )
 
-        # 사용자가 직접 입력한 값을 저장
+        # 직접 입력한 값 저장
         st.session_state.power_value = power
 
-        # 몰라요 버튼
+        # 평균값으로 하기
         st.button(
-            "몰라요",
+            "평균값으로 하기",
             key="average_power_button",
-            on_click=use_average_power
+            on_click=set_average_power
         )
 
 
     # =====================================================
-    # 사용시간 입력
+    # 예상 사용시간
     # =====================================================
 
     with col2:
@@ -355,20 +358,20 @@ def show_page_two():
         usage_time = st.number_input(
             "사용시간",
 
-            # 최소 0.01
+            # 최소 0.01시간
             min_value=0.01,
 
-            # 최대 24.00
+            # 최대 24시간
             max_value=24.00,
 
-            # 0.01 단위
+            # 0.01시간 단위
             step=0.01,
 
             value=float(st.session_state.usage_time),
 
             format="%.2f",
 
-            key="usage_time_box",
+            key="usage_time_input",
 
             label_visibility="collapsed"
         )
@@ -377,7 +380,7 @@ def show_page_two():
 
 
     # =====================================================
-    # 완료 버튼
+    # 완료
     # =====================================================
 
     with col3:
@@ -397,23 +400,23 @@ def show_page_two():
             key="complete_button"
         ):
 
-            # 소비전력
+            # 소비전력 kW
             power_kw = float(st.session_state.power_value)
 
-            # 사용시간
+            # 사용시간 h
             hours = float(st.session_state.usage_time)
 
-            # ---------------------------------------------
+            # -------------------------------------------------
             # 전력 사용량 계산
             # kWh = kW × h
-            # ---------------------------------------------
+            # -------------------------------------------------
 
             energy = power_kw * hours
 
-            # ---------------------------------------------
-            # 전기요금 계산
+            # -------------------------------------------------
+            # 예상 전기요금 계산
             # 원 = kWh × 150원
-            # ---------------------------------------------
+            # -------------------------------------------------
 
             cost = energy * ELECTRICITY_RATE
 
@@ -421,7 +424,7 @@ def show_page_two():
             st.session_state.energy_usage = energy
             st.session_state.estimated_cost = cost
 
-            # 3페이지로 이동
+            # 3페이지 이동
             st.session_state.page = 3
 
             st.rerun()
@@ -452,7 +455,7 @@ def show_page_two():
             # 1페이지로 이동
             st.session_state.page = 1
 
-            # 데이터 초기화
+            # 값 초기화
             st.session_state.selected_product = None
             st.session_state.power_value = 0.0
             st.session_state.usage_time = 0.01
@@ -505,7 +508,7 @@ def show_page_three():
         unsafe_allow_html=True
     )
 
-    # 화면 아래쪽
+    # 아래쪽 공간
     st.write("")
     st.write("")
     st.write("")
@@ -519,13 +522,13 @@ def show_page_three():
 
         if st.button(
             "이전으로 돌아가기",
-            key="back_to_first_button"
+            key="back_button"
         ):
 
             # 1페이지로 이동
             st.session_state.page = 1
 
-            # 모든 값 초기화
+            # 전체 초기화
             st.session_state.selected_product = None
             st.session_state.power_value = 0.0
             st.session_state.usage_time = 0.01
@@ -536,7 +539,7 @@ def show_page_three():
 
 
 # =========================================================
-# 페이지 실행
+# 페이지 표시
 # =========================================================
 
 if st.session_state.page == 1:
@@ -550,3 +553,4 @@ elif st.session_state.page == 2:
 elif st.session_state.page == 3:
 
     show_page_three()
+    
